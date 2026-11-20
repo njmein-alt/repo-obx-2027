@@ -393,15 +393,16 @@ const API='https://abacus.jasoncameron.dev',NS='njmein-obx2027-mm';
 const cards=[...document.querySelectorAll('.card[data-hid]')];
 const ls={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 let cache=ls.get('mm-votes2',{}),voted=ls.get('mm-voted',{});
+function keep(c){if(!window.mmRender||document.getElementById('sort').value!=='mm')return;const y=window.scrollY,t=c?c.getBoundingClientRect().top:0;window.mmRender();if(c)window.scrollBy(0,c.getBoundingClientRect().top-t);else window.scrollTo(0,y)}
 const cnt=id=>{const d=cache[id]||{v:0,u:0};return Math.max(0,d.v-d.u)};
 function show(c){const id=c.dataset.hid,n=cnt(id);c.dataset.mmv=n;c.querySelector('.mmv').textContent=`M&M votes: ${n}`;const b=c.querySelector('.vt');b.classList.toggle('on',!!voted[id]);b.textContent=voted[id]?'✓ Voted (tap to remove)':'👍 Vote'}
 async function get(key){const r=await fetch(`${API}/get/${NS}/${key}`);if(r.status===404)return 0;if(!r.ok)throw 0;return (await r.json()).value||0}
 async function load(id){const v=await get(id+'-v');const u=v>0?await get(id+'-u'):0;cache[id]={v,u}}
 cards.forEach(c=>{show(c);const b=c.querySelector('.vt');b.onclick=async()=>{if(b.dataset.busy)return;b.dataset.busy=1;const id=c.dataset.hid,was=!!voted[id];
  const d=cache[id]||(cache[id]={v:0,u:0});if(was){delete voted[id];d.u++}else{voted[id]=1;d.v++}ls.set('mm-voted',voted);show(c);
- try{const r=await fetch(`${API}/hit/${NS}/${id}-${was?'u':'v'}`);if(!r.ok)throw 0;d[was?'u':'v']=(await r.json()).value;ls.set('mm-votes2',cache);show(c);if(window.mmRender)window.mmRender()}
+ try{const r=await fetch(`${API}/hit/${NS}/${id}-${was?'u':'v'}`);if(!r.ok)throw 0;d[was?'u':'v']=(await r.json()).value;ls.set('mm-votes2',cache);show(c);keep(c)}
  catch(e){if(was){voted[id]=1;d.u--}else{delete voted[id];d.v--}ls.set('mm-voted',voted);show(c);b.textContent+=' – failed, try again'}
  delete b.dataset.busy}});
-(async()=>{const q=cards.slice();const w=async()=>{while(q.length){const c=q.shift();try{await load(c.dataset.hid);show(c)}catch(e){}}};await Promise.all([w(),w(),w(),w()]);ls.set('mm-votes2',cache);if(window.mmRender)window.mmRender()})()
+(async()=>{const q=cards.slice();const w=async()=>{while(q.length){const c=q.shift();try{await load(c.dataset.hid);show(c)}catch(e){}}};await Promise.all([w(),w(),w(),w()]);ls.set('mm-votes2',cache);keep(null)})()
 })()</script>
 </body></html>
