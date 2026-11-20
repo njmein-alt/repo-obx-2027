@@ -25,7 +25,7 @@ footer{color:var(--mute);font-size:.82rem;margin-top:20px}footer p{margin:6px 0}
 .mm{margin:4px 0 6px;font-size:13px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .mm .mmv{background:#1f2a44;color:#fff;font-weight:600;border-radius:10px;padding:2px 9px}
 .mm .vt{font-size:13px;padding:2px 12px;border-radius:12px;border:1px solid #1a7a3f;background:#1a7a3f;color:#fff;cursor:pointer;font-weight:600}
-.mm .vt:disabled{background:#e6f4ea;color:#0b5d2a;cursor:default}
+.mm .vt.on{background:#e6f4ea;color:#0b5d2a}
 </style></head><body><main>
 <h1>OBX Beach House Shortlist · July 2027</h1><p class="sub">55 houses from 4 rental companies + Vrbo, checked on satellite maps</p>
 <details class="crit"><summary>Search criteria</summary><div><b>Group:</b> 8 adults + 4 kids · <b>Must-haves:</b> 5+ bedrooms, sleeps 12+, private pool (heated) unless oceanfront directly on the beach, central A/C, pet friendly, no 4x4-only areas or Hatteras Island · <b>Budget:</b> under $8,000 total · <b>Weeks:</b> Jul 3–10, Jul 17–24, Jul 24–31, Jul 31–Aug 7 (Sat–Sat) · <b>Ratings:</b> shown as N/A with 🚩 when fewer than 5 reviews</div></details>
@@ -392,13 +392,16 @@ footer{color:var(--mute);font-size:.82rem;margin-top:20px}footer p{margin:6px 0}
 const API='https://abacus.jasoncameron.dev',NS='njmein-obx2027-mm';
 const cards=[...document.querySelectorAll('.card[data-hid]')];
 const ls={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
-let cache=ls.get('mm-votes',{}),voted=ls.get('mm-voted',{});
-function show(c){const id=c.dataset.hid,n=cache[id]||0;c.dataset.mmv=n;c.querySelector('.mmv').textContent=`M&M votes: ${n}`;const b=c.querySelector('.vt');if(voted[id]){b.disabled=true;b.textContent='✓ Voted'}}
-async function get(id){const r=await fetch(`${API}/get/${NS}/${id}-v`);if(r.status===404)return 0;if(!r.ok)throw 0;return (await r.json()).value||0}
-cards.forEach(c=>{show(c);const b=c.querySelector('.vt');b.onclick=async()=>{const id=c.dataset.hid;if(voted[id])return;
- voted[id]=1;ls.set('mm-voted',voted);cache[id]=(cache[id]||0)+1;show(c);
- try{const r=await fetch(`${API}/hit/${NS}/${id}-v`);if(!r.ok)throw 0;cache[id]=(await r.json()).value;ls.set('mm-votes',cache);show(c);if(window.mmRender)window.mmRender()}
- catch(e){delete voted[id];ls.set('mm-voted',voted);cache[id]=Math.max(0,cache[id]-1);b.disabled=false;b.textContent='👍 Vote (retry)';show(c)}}});
-(async()=>{const q=cards.slice();const w=async()=>{while(q.length){const c=q.shift();try{cache[c.dataset.hid]=await get(c.dataset.hid);show(c)}catch(e){}}};await Promise.all([w(),w(),w(),w()]);ls.set('mm-votes',cache);if(window.mmRender)window.mmRender()})()
+let cache=ls.get('mm-votes2',{}),voted=ls.get('mm-voted',{});
+const cnt=id=>{const d=cache[id]||{v:0,u:0};return Math.max(0,d.v-d.u)};
+function show(c){const id=c.dataset.hid,n=cnt(id);c.dataset.mmv=n;c.querySelector('.mmv').textContent=`M&M votes: ${n}`;const b=c.querySelector('.vt');b.classList.toggle('on',!!voted[id]);b.textContent=voted[id]?'✓ Voted (tap to remove)':'👍 Vote'}
+async function get(key){const r=await fetch(`${API}/get/${NS}/${key}`);if(r.status===404)return 0;if(!r.ok)throw 0;return (await r.json()).value||0}
+async function load(id){const v=await get(id+'-v');const u=v>0?await get(id+'-u'):0;cache[id]={v,u}}
+cards.forEach(c=>{show(c);const b=c.querySelector('.vt');b.onclick=async()=>{if(b.dataset.busy)return;b.dataset.busy=1;const id=c.dataset.hid,was=!!voted[id];
+ const d=cache[id]||(cache[id]={v:0,u:0});if(was){delete voted[id];d.u++}else{voted[id]=1;d.v++}ls.set('mm-voted',voted);show(c);
+ try{const r=await fetch(`${API}/hit/${NS}/${id}-${was?'u':'v'}`);if(!r.ok)throw 0;d[was?'u':'v']=(await r.json()).value;ls.set('mm-votes2',cache);show(c);if(window.mmRender)window.mmRender()}
+ catch(e){if(was){voted[id]=1;d.u--}else{delete voted[id];d.v--}ls.set('mm-voted',voted);show(c);b.textContent+=' – failed, try again'}
+ delete b.dataset.busy}});
+(async()=>{const q=cards.slice();const w=async()=>{while(q.length){const c=q.shift();try{await load(c.dataset.hid);show(c)}catch(e){}}};await Promise.all([w(),w(),w(),w()]);ls.set('mm-votes2',cache);if(window.mmRender)window.mmRender()})()
 })()</script>
 </body></html>
