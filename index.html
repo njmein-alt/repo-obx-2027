@@ -436,9 +436,11 @@ async function pump(){if(running)return;running=true;
    job.rej(0)}
   catch(e){if(++job.tries>4){job.rej(0);continue}await wait(1500);Q[0].unshift(job)}}
  running=false}
-let PRI=2;const get=key=>call(`get/${NS}/${key}`,true,PRI),hit=key=>call(`hit/${NS}/${key}`,false,0);
-const net2=async(a,b)=>{const x=await get(a);return x>0?Math.max(0,x-(await get(b))):0};
-async function load(id){const [ut,dt,lv]=await Promise.all([net2(id+'-ut',id+'-utu'),net2(id+'-dt',id+'-dtu'),net2(id+'-v',id+'-u')]);if(!pend[id])C[id]={up:lv+ut,dn:dt,lv}}
+const get=(key,pri=2)=>call(`get/${NS}/${key}`,true,pri),hit=key=>call(`hit/${NS}/${key}`,false,0);
+const net2=async(a,b,pri=2)=>{const x=await get(a,pri);return x>0?Math.max(0,x-(await get(b,pri))):0};
+// only these houses ever got votes from the first (reason-less) Vote button
+const LEG=['time-paws-reflect','740-wild-horses','hob-9305'];
+async function load(id,pri=2){const ut=await net2(id+'-ut',id+'-utu',pri),dt=await net2(id+'-dt',id+'-dtu',pri),lv=LEG.includes(id)?await net2(id+'-v',id+'-u',pri):0;if(!pend[id])C[id]={up:lv+ut,dn:dt,lv}}
 function show(c){const id=c.dataset.hid,x=C[id]||{up:0,dn:0},m=mine[id],net=x.up-x.dn;c.dataset.mmv=net;c.dataset.mmup=x.up;
  c.querySelector('.mmv').textContent=`M&M votes: ${net}`;
  const b=c.querySelector('.vt'),d=c.querySelector('.dv');b.classList.toggle('mine',!!m&&m.t==='u');d.classList.toggle('mine',!!m&&m.t==='d');
@@ -448,19 +450,20 @@ function mineHtml(t,id){const m=mine[id],R=RS[t];let html='';
  else if(m){const mt=m.t==='u'?'upvote':'downvote';html+=`<div class="note">You ${m.t==='u'?'👍 upvoted':'👎 downvoted'} this house (${rnames(m)}). Tapping ${t==='u'?'👍':'👎'} cancels your ${mt}.</div><div class="ch"><button type="button" class="rm">Cancel my ${mt}</button><button type="button" class="cx">Keep it</button></div>`}
  else html+=`<div class="note">${t==='u'?'Why the upvote?':'Why the downvote?'} Pick one or more reasons, then Save:</div><div class="ch">${R.map(r=>`<button type="button" data-r="${r[0]}">${r[1]}</button>`).join('')}</div><div class="ch"><button type="button" class="sv" disabled>Save</button><button type="button" class="cx">Cancel</button></div>`;
  return html}
-let RC=ls.get('mm-rc',{}),RF={};
-function rsHtml(id,t){const x=C[id]||{up:0,dn:0,lv:0},total=t==='u'?x.up:x.dn,R=RS[t],vals=RC[id+t];
+let RC=ls.get('mm-rc2',{}),RF={};
+const votesOf=(id,t)=>{const x=C[id]||{up:0,dn:0,lv:0};return t==='u'?x.up-(x.lv||0):x.dn};
+function rsHtml(id,t){const x=C[id]||{up:0,dn:0,lv:0},total=t==='u'?x.up:x.dn,R=RS[t],vals=RC[id+t]&&RC[id+t].a;
  const head=`<b>${t==='u'?`👍 Upvotes: ${total}`:`👎 Downvotes: ${total}`}</b>`;
  if(!total)return `<div class="rs">${head}<div class="note">None yet.</div></div>`;
  if(!vals)return `<div class="rs">${head}<div class="note">${RF[id+t]?'Couldn’t load reasons right now (vote counter busy). Close and tap again in a few seconds.':'Loading reasons…'}</div></div>`;
  const lv=t==='u'?(x.lv||0):0;
  return `<div class="rs">${head}`+R.map((r,i)=>vals[i]>0?`<div>${t==='u'?'👍':'👎'} ${r[1]} ×${vals[i]}</div>`:'').join('')+(lv>0?`<div>👍 No reason given ×${lv}</div>`:'')+'</div>'}
-async function fetchRs(id,t){const x=C[id]||{up:0,dn:0,lv:0};const votes=t==='u'?x.up-(x.lv||0):x.dn;delete RF[id+t];
- if(votes<=0){RC[id+t]=RS[t].map(()=>0);ls.set('mm-rc',RC);return}
- PRI=1;try{const need=Math.max(votes,await net2(`${id}-${t}rc`,`${id}-${t}rcu`));const vals=RS[t].map(()=>0);let sum=0;
+async function fetchRs(id,t,pri=1){const votes=votesOf(id,t);delete RF[id+t];if(RC[id+t]&&RC[id+t].v===votes)return;
+ if(votes<=0){RC[id+t]={v:votes,a:RS[t].map(()=>0)};ls.set('mm-rc2',RC);return}
+ try{const need=Math.max(votes,await net2(`${id}-${t}rc`,`${id}-${t}rcu`,pri));const vals=RS[t].map(()=>0);let sum=0;
   // stop as soon as the reasons found add up to the vote total
-  for(let i=0;i<RS[t].length&&sum<need;i++){vals[i]=await net2(`${id}-${t}r-${RS[t][i][0]}`,`${id}-${t}ru-${RS[t][i][0]}`);sum+=vals[i]}
-  RC[id+t]=vals;ls.set('mm-rc',RC)}catch(e){RF[id+t]=1}finally{PRI=2}}
+  for(let i=0;i<RS[t].length&&sum<need;i++){vals[i]=await net2(`${id}-${t}r-${RS[t][i][0]}`,`${id}-${t}ru-${RS[t][i][0]}`,pri);sum+=vals[i]}
+  RC[id+t]={v:votesOf(id,t),a:vals};ls.set('mm-rc2',RC)}catch(e){RF[id+t]=1}}
 function draw(c,mode){const id=c.dataset.hid,p=c.querySelector('.dp');p.dataset.t=mode;
  if(mode==='a'){p.className='dp a';p.innerHTML=`<div class="note">M&amp;M votes = 👍 minus 👎. Names aren’t saved, only reasons.</div>`+rsHtml(id,'u')+rsHtml(id,'d')}
  else{p.className='dp '+mode;p.innerHTML=rsHtml(id,mode)+mineHtml(mode,id)}
@@ -479,10 +482,13 @@ cards.forEach(c=>{show(c);const id=c.dataset.hid,p=c.querySelector('.dp');
   // update the page right away; the counter catches up in the background
   if(prev)bump(id,prev.t,-1);if(isRm){delete mine[id]}else{mine[id]={t,rs};bump(id,t,1)}save();show(c);keep(c);
   p.innerHTML=`<div class="note">${isRm?'✓ Your vote was removed':`✓ ${t==='u'?'👍':'👎'} saved: ${rnames({t,rs})}`}</div>`;setTimeout(()=>{if(p.firstChild&&p.textContent.startsWith('✓'))p.hidden=true},1500);
-  delete RC[id+'u'];delete RC[id+'d'];ls.set('mm-rc',RC);  pend[id]=(pend[id]||0)+1;try{await undo(id,prev);if(!isRm){for(const r of rs)await hit(`${id}-${t}r-${r}`);await hit(`${id}-${t}t`);for(const r of rs)await hit(`${id}-${t}rc`)}}
+  const adj=(m,d)=>{if(!m||m.r==='legacy')return;const e=RC[id+m.t];if(!e)return;for(const r of rsOf(m)){const i=RS[m.t].findIndex(x=>x[0]===r);if(i>=0)e.a[i]=Math.max(0,e.a[i]+d)}e.v=votesOf(id,m.t)};adj(prev,-1);if(!isRm)adj({t,rs},1);if(prev&&prev.t!==t&&RC[id+prev.t])RC[id+prev.t].v=votesOf(id,prev.t);ls.set('mm-rc2',RC);  pend[id]=(pend[id]||0)+1;try{await undo(id,prev);if(!isRm){for(const r of rs)await hit(`${id}-${t}r-${r}`);await hit(`${id}-${t}t`);for(const r of rs)await hit(`${id}-${t}rc`)}}
   catch(e){if(isRm){mine[id]=prev}else{bump(id,t,-1);if(prev)mine[id]=prev;else delete mine[id]}if(prev)bump(id,prev.t,1);save();show(c);p.hidden=false;p.innerHTML='<div class="note">⚠️ Couldn’t save your vote — the vote counter is busy. Please try again in a few seconds.</div>'}
   finally{pend[id]--}}});
 keep(null);
-(async()=>{const order=[...document.querySelectorAll('.card[data-hid]')].sort((a,b)=>(a.style.display==='none')-(b.style.display==='none'));for(const c of order){try{const id=c.dataset.hid,old=JSON.stringify(C[id]);await load(id);show(c);save();if(JSON.stringify(C[id])!==old){delete RC[id+'u'];delete RC[id+'d'];const p=c.querySelector('.dp');if(!p.hidden&&p.dataset.t&&!/^[✓⚠]/.test(p.textContent)){panel(c,p.dataset.t)}}}catch(e){}}keep(null)})()
+(async()=>{const order=[...document.querySelectorAll('.card[data-hid]')].sort((a,b)=>(a.style.display==='none')-(b.style.display==='none'));
+ if(Date.now()-ls.get('mm-swept',0)>90000){for(const c of order){try{const id=c.dataset.hid,old=JSON.stringify(C[id]);await load(id);show(c);save();if(JSON.stringify(C[id])!==old)redraw(c)}catch(e){}}ls.set('mm-swept',Date.now());keep(null)}
+ // fetch reasons for houses with votes ahead of time so the box opens instantly
+ for(const c of order){const id=c.dataset.hid;for(const t of ['u','d']){if(votesOf(id,t)>0&&!(RC[id+t]&&RC[id+t].v===votesOf(id,t))){await fetchRs(id,t,2);redraw(c)}}}})()
 })()</script>
 </body></html>
