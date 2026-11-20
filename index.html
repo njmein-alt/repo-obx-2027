@@ -35,6 +35,10 @@ footer{color:var(--mute);font-size:.82rem;margin-top:20px}footer p{margin:6px 0}
 .mm .dp .ch button{font-size:13px;padding:3px 9px;border-radius:10px;background:#fff;cursor:pointer}
 .mm .dp.u .ch button{border:1px solid #1a7a3f;color:#1a7a3f}.mm .dp.d .ch button{border:1px solid #b3261e;color:#b3261e}
 .mm .dp .ch button.cx{background:#eee!important;border-color:#999!important;color:#333!important;font-weight:600}
+.mm .dp .ch button.sel{background:#333!important;color:#fff!important;border-color:#333!important}
+.mm .dp .ch button.sel::before{content:'✓ '}
+.mm .dp .ch button.sv{background:#1a7a3f!important;border-color:#1a7a3f!important;color:#fff!important;font-weight:700}
+.mm .dp .ch button.sv:disabled{opacity:.4}
 .mm .dp .ch button.rm{background:#555;border-color:#555;color:#fff}
 .mm .dp .note{color:#555;font-size:12px}
 .mm .mmv{background:#1f2a44;color:#fff;font-weight:600;border-radius:12px;padding:5px 12px;border:0;font-size:14px;cursor:pointer}
@@ -415,7 +419,9 @@ const ls={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){re
 let C=ls.get('mm-c3',{}),mine=ls.get('mm-mine3',null);
 if(!mine){mine={};const ov=ls.get('mm-voted',{}),od=ls.get('mm-mydown',{});for(const k in ov)mine[k]={t:'u',r:'legacy'};for(const k in od)mine[k]={t:'d',r:od[k]};ls.set('mm-mine3',mine)}
 const save=()=>{ls.set('mm-c3',C);ls.set('mm-mine3',mine)};
+const rsOf=m=>m.rs||(m.r&&m.r!=='legacy'?[m.r]:[]);
 const rname=(t,r)=>r==='legacy'?'no reason given':((RS[t].find(x=>x[0]===r)||['','?'])[1]);
+const rnames=m=>m.r==='legacy'?'no reason given':rsOf(m).map(r=>rname(m.t,r)).join(', ');
 function keep(c){if(!window.mmRender||document.getElementById('sort').value!=='mm')return;const y=window.scrollY,t=c?c.getBoundingClientRect().top:0;window.mmRender();if(c)window.scrollBy(0,c.getBoundingClientRect().top-t);else window.scrollTo(0,y)}
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 const Q=[[],[],[]];let running=false,last=0;
@@ -438,9 +444,9 @@ function show(c){const id=c.dataset.hid,x=C[id]||{up:0,dn:0},m=mine[id],net=x.up
  const b=c.querySelector('.vt'),d=c.querySelector('.dv');b.classList.toggle('mine',!!m&&m.t==='u');d.classList.toggle('mine',!!m&&m.t==='d');
  b.textContent='👍';d.textContent='👎'}
 function mineHtml(t,id){const m=mine[id],R=RS[t];let html='';
- if(m&&m.t===t)html+=`<div class="note">Your ${t==='u'?'upvote':'downvote'}: ${rname(t,m.r)}</div><div class="ch"><button type="button" class="rm">Remove my ${t==='u'?'upvote':'downvote'}</button><button type="button" class="cx">Cancel</button></div>`;
- else if(m){const mt=m.t==='u'?'upvote':'downvote';html+=`<div class="note">You ${m.t==='u'?'👍 upvoted':'👎 downvoted'} this house (${rname(m.t,m.r)}). Tapping ${t==='u'?'👍':'👎'} cancels your ${mt}.</div><div class="ch"><button type="button" class="rm">Cancel my ${mt}</button><button type="button" class="cx">Keep it</button></div>`}
- else html+=`<div class="note">${t==='u'?'Why the upvote?':'Why the downvote?'} Pick a reason:</div><div class="ch">${R.map(r=>`<button type="button" data-r="${r[0]}">${r[1]}</button>`).join('')}<button type="button" class="cx">Cancel</button></div>`;
+ if(m&&m.t===t)html+=`<div class="note">Your ${t==='u'?'upvote':'downvote'}: ${rnames(m)}</div><div class="ch"><button type="button" class="rm">Remove my ${t==='u'?'upvote':'downvote'}</button><button type="button" class="cx">Cancel</button></div>`;
+ else if(m){const mt=m.t==='u'?'upvote':'downvote';html+=`<div class="note">You ${m.t==='u'?'👍 upvoted':'👎 downvoted'} this house (${rnames(m)}). Tapping ${t==='u'?'👍':'👎'} cancels your ${mt}.</div><div class="ch"><button type="button" class="rm">Cancel my ${mt}</button><button type="button" class="cx">Keep it</button></div>`}
+ else html+=`<div class="note">${t==='u'?'Why the upvote?':'Why the downvote?'} Pick one or more reasons, then Save:</div><div class="ch">${R.map(r=>`<button type="button" data-r="${r[0]}">${r[1]}</button>`).join('')}</div><div class="ch"><button type="button" class="sv" disabled>Save</button><button type="button" class="cx">Cancel</button></div>`;
  return html}
 let RC=ls.get('mm-rc',{}),RF={};
 function rsHtml(id,t){const x=C[id]||{up:0,dn:0,lv:0},total=t==='u'?x.up:x.dn,R=RS[t],vals=RC[id+t];
@@ -449,9 +455,9 @@ function rsHtml(id,t){const x=C[id]||{up:0,dn:0,lv:0},total=t==='u'?x.up:x.dn,R=
  if(!vals)return `<div class="rs">${head}<div class="note">${RF[id+t]?'Couldn’t load reasons right now (vote counter busy). Close and tap again in a few seconds.':'Loading reasons…'}</div></div>`;
  const lv=t==='u'?(x.lv||0):0;
  return `<div class="rs">${head}`+R.map((r,i)=>vals[i]>0?`<div>${t==='u'?'👍':'👎'} ${r[1]} ×${vals[i]}</div>`:'').join('')+(lv>0?`<div>👍 No reason given ×${lv}</div>`:'')+'</div>'}
-async function fetchRs(id,t){const x=C[id]||{up:0,dn:0,lv:0};const need=t==='u'?x.up-(x.lv||0):x.dn;delete RF[id+t];
- if(need<=0){RC[id+t]=RS[t].map(()=>0);ls.set('mm-rc',RC);return}
- PRI=1;try{const vals=RS[t].map(()=>0);let sum=0;
+async function fetchRs(id,t){const x=C[id]||{up:0,dn:0,lv:0};const votes=t==='u'?x.up-(x.lv||0):x.dn;delete RF[id+t];
+ if(votes<=0){RC[id+t]=RS[t].map(()=>0);ls.set('mm-rc',RC);return}
+ PRI=1;try{const need=Math.max(votes,await net2(`${id}-${t}rc`,`${id}-${t}rcu`));const vals=RS[t].map(()=>0);let sum=0;
   // stop as soon as the reasons found add up to the vote total
   for(let i=0;i<RS[t].length&&sum<need;i++){vals[i]=await net2(`${id}-${t}r-${RS[t][i][0]}`,`${id}-${t}ru-${RS[t][i][0]}`);sum+=vals[i]}
   RC[id+t]=vals;ls.set('mm-rc',RC)}catch(e){RF[id+t]=1}finally{PRI=2}}
@@ -463,16 +469,17 @@ function redraw(c){const p=c.querySelector('.dp');if(!p||p.hidden||!p.dataset.t|
 async function panel(c,mode){const id=c.dataset.hid,p=c.querySelector('.dp');draw(c,mode);
  for(const t of (mode==='a'?['u','d']:[mode])){await fetchRs(id,t);if(!p.hidden&&p.dataset.t===mode&&!p.textContent.startsWith('✓'))draw(c,mode)}}
 const pend={};
-async function undo(id,m){if(!m)return;if(m.r==='legacy')await hit(id+'-u');else{await hit(`${id}-${m.t}ru-${m.r}`);await hit(`${id}-${m.t}tu`)}}
+async function undo(id,m){if(!m)return;if(m.r==='legacy'){await hit(id+'-u');return}const rs=rsOf(m);for(const r of rs)await hit(`${id}-${m.t}ru-${r}`);await hit(`${id}-${m.t}tu`);for(const r of rs)await hit(`${id}-${m.t}rcu`)}
 const bump=(id,t,d)=>{const x=C[id]||(C[id]={up:0,dn:0,lv:0});if(t==='u'){x.up=Math.max(0,x.up+d);if(d<0&&x.lv>0)x.lv--}else x.dn=Math.max(0,x.dn+d)};
 cards.forEach(c=>{show(c);const id=c.dataset.hid,p=c.querySelector('.dp');
  const tog=t=>{if(!p.hidden&&p.dataset.t===t){p.hidden=true;return}panel(c,t)};
  c.querySelector('.mmv').onclick=()=>tog('a');c.querySelector('.vt').onclick=()=>tog('u');c.querySelector('.dv').onclick=()=>tog('d');
- p.onclick=async ev=>{const btn=ev.target.closest('button');if(!btn)return;if(btn.classList.contains('cx')){p.hidden=true;return}const t=p.dataset.t,prev=mine[id];const isRm=btn.classList.contains('rm'),r=btn.dataset.r;if(!isRm&&!r)return;
+ p.onclick=async ev=>{const btn=ev.target.closest('button');if(!btn)return;if(btn.classList.contains('cx')){p.hidden=true;return}if(btn.dataset.r){btn.classList.toggle('sel');const sv=p.querySelector('.sv');if(sv)sv.disabled=!p.querySelector('button.sel');return}
+  const t=p.dataset.t,prev=mine[id];const isRm=btn.classList.contains('rm');if(!isRm&&!btn.classList.contains('sv'))return;const rs=isRm?[]:[...p.querySelectorAll('button.sel')].map(b=>b.dataset.r);if(!isRm&&!rs.length)return;
   // update the page right away; the counter catches up in the background
-  if(prev)bump(id,prev.t,-1);if(isRm){delete mine[id]}else{mine[id]={t,r};bump(id,t,1)}save();show(c);keep(c);
-  p.innerHTML=`<div class="note">${isRm?'✓ Your vote was removed':`✓ ${t==='u'?'👍':'👎'} saved: ${rname(t,r)}`}</div>`;setTimeout(()=>{if(p.firstChild&&p.textContent.startsWith('✓'))p.hidden=true},1500);
-  delete RC[id+'u'];delete RC[id+'d'];ls.set('mm-rc',RC);  pend[id]=(pend[id]||0)+1;try{await undo(id,prev);if(!isRm){await hit(`${id}-${t}r-${r}`);await hit(`${id}-${t}t`)}}
+  if(prev)bump(id,prev.t,-1);if(isRm){delete mine[id]}else{mine[id]={t,rs};bump(id,t,1)}save();show(c);keep(c);
+  p.innerHTML=`<div class="note">${isRm?'✓ Your vote was removed':`✓ ${t==='u'?'👍':'👎'} saved: ${rnames({t,rs})}`}</div>`;setTimeout(()=>{if(p.firstChild&&p.textContent.startsWith('✓'))p.hidden=true},1500);
+  delete RC[id+'u'];delete RC[id+'d'];ls.set('mm-rc',RC);  pend[id]=(pend[id]||0)+1;try{await undo(id,prev);if(!isRm){for(const r of rs)await hit(`${id}-${t}r-${r}`);await hit(`${id}-${t}t`);for(const r of rs)await hit(`${id}-${t}rc`)}}
   catch(e){if(isRm){mine[id]=prev}else{bump(id,t,-1);if(prev)mine[id]=prev;else delete mine[id]}if(prev)bump(id,prev.t,1);save();show(c);p.hidden=false;p.innerHTML='<div class="note">⚠️ Couldn’t save your vote — the vote counter is busy. Please try again in a few seconds.</div>'}
   finally{pend[id]--}}});
 keep(null);
