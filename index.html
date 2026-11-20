@@ -437,18 +437,24 @@ function mineHtml(t,id){const m=mine[id],R=RS[t];let html='';
  if(m&&m.t===t)html+=`<div class="note">Your ${t==='u'?'upvote':'downvote'}: ${rname(t,m.r)}</div><div class="ch"><button type="button" class="rm">Remove my ${t==='u'?'upvote':'downvote'}</button></div>`;
  else html+=`<div class="note">${t==='u'?'Why the upvote?':'Why the downvote?'} Pick a reason${m?` (this replaces your ${m.t==='u'?'👍':'👎'})`:''}:</div><div class="ch">${R.map(r=>`<button type="button" data-r="${r[0]}">${r[1]}</button>`).join('')}</div>`;
  return html}
-let RC=ls.get('mm-rc',{});
+let RC=ls.get('mm-rc',{}),RF={};
 function rsHtml(id,t){const x=C[id]||{up:0,dn:0,lv:0},total=t==='u'?x.up:x.dn,R=RS[t],vals=RC[id+t];
  const head=`<b>${t==='u'?`👍 Upvotes: ${total}`:`👎 Downvotes: ${total}`}</b>`;
  if(!total)return `<div class="rs">${head}<div class="note">None yet.</div></div>`;
- if(!vals)return `<div class="rs">${head}<div class="note">Loading reasons…</div></div>`;
+ if(!vals)return `<div class="rs">${head}<div class="note">${RF[id+t]?'Couldn’t load reasons right now (vote counter busy). Close and tap again in a few seconds.':'Loading reasons…'}</div></div>`;
  const lv=t==='u'?(x.lv||0):0;
  return `<div class="rs">${head}`+R.map((r,i)=>vals[i]>0?`<div>${t==='u'?'👍':'👎'} ${r[1]} ×${vals[i]}</div>`:'').join('')+(lv>0?`<div>👍 No reason given ×${lv}</div>`:'')+'</div>'}
-async function fetchRs(id,t){const x=C[id]||{up:0,dn:0};if(!(t==='u'?x.up:x.dn))return;PRI=1;try{const vals=[];for(const r of RS[t])vals.push(await net2(`${id}-${t}r-${r[0]}`,`${id}-${t}ru-${r[0]}`));RC[id+t]=vals;ls.set('mm-rc',RC)}catch(e){}finally{PRI=2}}
+async function fetchRs(id,t){const x=C[id]||{up:0,dn:0,lv:0};const need=t==='u'?x.up-(x.lv||0):x.dn;delete RF[id+t];
+ if(need<=0){RC[id+t]=RS[t].map(()=>0);ls.set('mm-rc',RC);return}
+ PRI=1;try{const vals=RS[t].map(()=>0);let sum=0;
+  // stop as soon as the reasons found add up to the vote total
+  for(let i=0;i<RS[t].length&&sum<need;i++){vals[i]=await net2(`${id}-${t}r-${RS[t][i][0]}`,`${id}-${t}ru-${RS[t][i][0]}`);sum+=vals[i]}
+  RC[id+t]=vals;ls.set('mm-rc',RC)}catch(e){RF[id+t]=1}finally{PRI=2}}
 function draw(c,mode){const id=c.dataset.hid,p=c.querySelector('.dp');p.dataset.t=mode;
  if(mode==='a'){p.className='dp a';p.innerHTML=`<div class="note">M&amp;M votes = 👍 minus 👎. Names aren’t saved, only reasons.</div>`+rsHtml(id,'u')+rsHtml(id,'d')}
  else{p.className='dp '+mode;p.innerHTML=rsHtml(id,mode)+mineHtml(mode,id)}
  p.hidden=false}
+function redraw(c){const p=c.querySelector('.dp');if(!p||p.hidden||!p.dataset.t||p.textContent.startsWith('✓')||p.textContent.startsWith('⚠'))return;draw(c,p.dataset.t)}
 async function panel(c,mode){const id=c.dataset.hid,p=c.querySelector('.dp');draw(c,mode);
  for(const t of (mode==='a'?['u','d']:[mode])){await fetchRs(id,t);if(!p.hidden&&p.dataset.t===mode&&!p.textContent.startsWith('✓'))draw(c,mode)}}
 const pend={};
@@ -464,6 +470,6 @@ cards.forEach(c=>{show(c);const id=c.dataset.hid,p=c.querySelector('.dp');
   delete RC[id+'u'];delete RC[id+'d'];ls.set('mm-rc',RC);  pend[id]=(pend[id]||0)+1;try{await undo(id,prev);if(!isRm){await hit(`${id}-${t}r-${r}`);await hit(`${id}-${t}t`)}}
   catch(e){if(isRm){mine[id]=prev}else{bump(id,t,-1);if(prev)mine[id]=prev;else delete mine[id]}if(prev)bump(id,prev.t,1);save();show(c);p.hidden=false;p.innerHTML='<div class="note">⚠️ Couldn’t save your vote — the vote counter is busy. Please try again in a few seconds.</div>'}
   finally{pend[id]--}}});
-(async()=>{const order=[...document.querySelectorAll('.card[data-hid]')].sort((a,b)=>(a.style.display==='none')-(b.style.display==='none'));for(const c of order){try{await load(c.dataset.hid);show(c);save()}catch(e){}}keep(null)})()
+(async()=>{const order=[...document.querySelectorAll('.card[data-hid]')].sort((a,b)=>(a.style.display==='none')-(b.style.display==='none'));for(const c of order){try{const id=c.dataset.hid,old=JSON.stringify(C[id]);await load(id);show(c);save();if(JSON.stringify(C[id])!==old){delete RC[id+'u'];delete RC[id+'d'];const p=c.querySelector('.dp');if(!p.hidden&&p.dataset.t&&!/^[✓⚠]/.test(p.textContent)){panel(c,p.dataset.t)}}}catch(e){}}keep(null)})()
 })()</script>
 </body></html>
