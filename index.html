@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OBX July 2027 Rental Shortlist (v5)</title><style>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Beach House 2027 - 51 Houses</title><style>
 :root{--bg:#f6f3ec;--card:#fff;--ink:#1d2b36;--mute:#5e6b75;--sea:#0f6d8c;--sand:#e9dfc8;--line:#e3ddd0;--warn:#8a5a00;--warnbg:#fff4d6;--ok:#1d7a3e}
 @media (prefers-color-scheme:dark){:root{--bg:#12191e;--card:#1b252c;--ink:#e8edf0;--mute:#9aa7b0;--sea:#5cc0df;--sand:#2a3740;--line:#2c3a43;--warn:#ffd27a;--warnbg:#3a2f14;--ok:#6fd38f}}
 *{box-sizing:border-box}body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink)}
@@ -51,7 +51,7 @@ h2 .area{font-size:13px;font-weight:600;color:#1f2a44;background:#eef1f8;border-
 .crit.fil summary span{color:var(--ink);font-weight:600}
 .crit.fil .filters{margin-top:4px}
 </style></head><body><main>
-<h1>OBX Beach House Shortlist · July 2027</h1><p class="sub">51 houses from 4 rental companies + Vrbo, checked on satellite maps</p>
+<h1>Beach House 2027 - <span id="hcount">51</span> Houses</h1>
 <details class="crit"><summary>Search criteria</summary><div><b>Group:</b> 8 adults + 4 kids · <b>Must-haves:</b> 5+ bedrooms, sleeps 12+, private pool (heated) unless oceanfront directly on the beach, central A/C, pet friendly, no 4x4-only areas or Hatteras Island · <b>Budget:</b> under $9,000 total · <b>Weeks:</b> Jul 3–10, Jul 17–24, Jul 24–31, Jul 31–Aug 7 (Sat–Sat) · <b>Ratings:</b> shown as N/A with 🚩 when fewer than 5 reviews</div></details>
 <details class="crit fil"><summary>Rental companies: <span id="fsel">Rental companies (32)</span></summary><div class="filters"><button class="on" data-f="co">Rental companies (32)</button><button data-f="all">All incl. Vrbo (51)</button><button data-f="Beach Realty">Beach Realty (7)</button><button data-f="Twiddy">Twiddy (8)</button><button data-f="Sun Realty">Sun Realty (9)</button><button data-f="Brindley Beach">Brindley Beach (8)</button><button data-f="Vrbo">Vrbo (19)</button></div></details>
 <div class="bar">
@@ -655,4 +655,5 @@ keep(null);
  // fetch reasons for houses with votes ahead of time so the box opens instantly
  for(const c of order){const id=c.dataset.hid;for(const t of ['u','d']){if(votesOf(id,t)>0&&!(RC[id+t]&&RC[id+t].v===votesOf(id,t))){await fetchRs(id,t,2);redraw(c)}}}})()
 })()</script>
+<script>(function(){const n=document.querySelectorAll('article.card').length;document.getElementById('hcount').textContent=n;document.title='Beach House 2027 - '+n+' Houses'})()</script>
 </body></html>
