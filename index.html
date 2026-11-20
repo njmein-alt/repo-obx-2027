@@ -439,7 +439,8 @@ function show(c){const id=c.dataset.hid,x=C[id]||{up:0,dn:0},m=mine[id],net=x.up
  b.textContent='👍';d.textContent='👎'}
 function mineHtml(t,id){const m=mine[id],R=RS[t];let html='';
  if(m&&m.t===t)html+=`<div class="note">Your ${t==='u'?'upvote':'downvote'}: ${rname(t,m.r)}</div><div class="ch"><button type="button" class="rm">Remove my ${t==='u'?'upvote':'downvote'}</button><button type="button" class="cx">Cancel</button></div>`;
- else html+=`<div class="note">${t==='u'?'Why the upvote?':'Why the downvote?'} Pick a reason${m?` (this replaces your ${m.t==='u'?'👍':'👎'})`:''}:</div><div class="ch">${R.map(r=>`<button type="button" data-r="${r[0]}">${r[1]}</button>`).join('')}<button type="button" class="cx">Cancel</button></div>`;
+ else if(m){const mt=m.t==='u'?'upvote':'downvote';html+=`<div class="note">You ${m.t==='u'?'👍 upvoted':'👎 downvoted'} this house (${rname(m.t,m.r)}). Tapping ${t==='u'?'👍':'👎'} cancels your ${mt}.</div><div class="ch"><button type="button" class="rm">Cancel my ${mt}</button><button type="button" class="cx">Keep it</button></div>`}
+ else html+=`<div class="note">${t==='u'?'Why the upvote?':'Why the downvote?'} Pick a reason:</div><div class="ch">${R.map(r=>`<button type="button" data-r="${r[0]}">${r[1]}</button>`).join('')}<button type="button" class="cx">Cancel</button></div>`;
  return html}
 let RC=ls.get('mm-rc',{}),RF={};
 function rsHtml(id,t){const x=C[id]||{up:0,dn:0,lv:0},total=t==='u'?x.up:x.dn,R=RS[t],vals=RC[id+t];
