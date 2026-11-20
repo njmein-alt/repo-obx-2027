@@ -631,5 +631,5 @@ keep(null);
  for(const c of order){const id=c.dataset.hid;for(const t of ['u','d']){if(votesOf(id,t)>0&&!(RC[id+t]&&RC[id+t].v===votesOf(id,t))){await fetchRs(id,t,2);redraw(c)}}}})()
 })()</script>
 <script>(function(){const n=document.querySelectorAll('article.card').length;document.getElementById('hcount').textContent=n;document.title='Beach House 2027 - '+n+' Houses'})()</script>
-<script>(function(){function fit(){document.querySelectorAll('.thumb .nm,.thumb .ov.br').forEach(e=>{e.style.fontSize='';let fs=parseFloat(getComputedStyle(e).fontSize),w=e.parentElement.clientWidth-(e.classList.contains('nm')?4:12);let n=0;while(e.scrollWidth>w&&fs>9&&n++<40){fs-=0.5;e.style.setProperty('font-size',fs+'px','important')}})}window.addEventListener('load',fit);window.addEventListener('resize',fit);fit()})()</script>
+<script>(function(){function fit(){document.querySelectorAll('.thumb .nm,.thumb .ov.br').forEach(e=>{e.style.fontSize='';let fs=parseFloat(getComputedStyle(e).fontSize),nm=e.classList.contains('nm'),w=e.parentElement.clientWidth-12;const over=()=>nm?e.scrollWidth>e.clientWidth+1:e.offsetWidth>w;let n=0;while(over()&&fs>9&&n++<40){fs-=0.5;e.style.setProperty('font-size',fs+'px','important')}})}window.addEventListener('load',fit);window.addEventListener('resize',fit);fit()})()</script>
 </body></html>
