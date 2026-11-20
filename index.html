@@ -473,6 +473,7 @@ cards.forEach(c=>{show(c);const id=c.dataset.hid,p=c.querySelector('.dp');
   delete RC[id+'u'];delete RC[id+'d'];ls.set('mm-rc',RC);  pend[id]=(pend[id]||0)+1;try{await undo(id,prev);if(!isRm){await hit(`${id}-${t}r-${r}`);await hit(`${id}-${t}t`)}}
   catch(e){if(isRm){mine[id]=prev}else{bump(id,t,-1);if(prev)mine[id]=prev;else delete mine[id]}if(prev)bump(id,prev.t,1);save();show(c);p.hidden=false;p.innerHTML='<div class="note">⚠️ Couldn’t save your vote — the vote counter is busy. Please try again in a few seconds.</div>'}
   finally{pend[id]--}}});
+keep(null);
 (async()=>{const order=[...document.querySelectorAll('.card[data-hid]')].sort((a,b)=>(a.style.display==='none')-(b.style.display==='none'));for(const c of order){try{const id=c.dataset.hid,old=JSON.stringify(C[id]);await load(id);show(c);save();if(JSON.stringify(C[id])!==old){delete RC[id+'u'];delete RC[id+'d'];const p=c.querySelector('.dp');if(!p.hidden&&p.dataset.t&&!/^[✓⚠]/.test(p.textContent)){panel(c,p.dataset.t)}}}catch(e){}}keep(null)})()
 })()</script>
 </body></html>
