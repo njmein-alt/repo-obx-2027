@@ -34,6 +34,7 @@ footer{color:var(--mute);font-size:.82rem;margin-top:20px}footer p{margin:6px 0}
 .mm .dp .ch{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .mm .dp .ch button{font-size:13px;padding:3px 9px;border-radius:10px;background:#fff;cursor:pointer}
 .mm .dp.u .ch button{border:1px solid #1a7a3f;color:#1a7a3f}.mm .dp.d .ch button{border:1px solid #b3261e;color:#b3261e}
+.mm .dp .ch button.cx{background:#eee!important;border-color:#999!important;color:#333!important;font-weight:600}
 .mm .dp .ch button.rm{background:#555;border-color:#555;color:#fff}
 .mm .dp .note{color:#555;font-size:12px}
 .mm .mmv{background:#1f2a44;color:#fff;font-weight:600;border-radius:12px;padding:5px 12px;border:0;font-size:14px;cursor:pointer}
@@ -437,8 +438,8 @@ function show(c){const id=c.dataset.hid,x=C[id]||{up:0,dn:0},m=mine[id],net=x.up
  const b=c.querySelector('.vt'),d=c.querySelector('.dv');b.classList.toggle('mine',!!m&&m.t==='u');d.classList.toggle('mine',!!m&&m.t==='d');
  b.textContent='👍';d.textContent='👎'}
 function mineHtml(t,id){const m=mine[id],R=RS[t];let html='';
- if(m&&m.t===t)html+=`<div class="note">Your ${t==='u'?'upvote':'downvote'}: ${rname(t,m.r)}</div><div class="ch"><button type="button" class="rm">Remove my ${t==='u'?'upvote':'downvote'}</button></div>`;
- else html+=`<div class="note">${t==='u'?'Why the upvote?':'Why the downvote?'} Pick a reason${m?` (this replaces your ${m.t==='u'?'👍':'👎'})`:''}:</div><div class="ch">${R.map(r=>`<button type="button" data-r="${r[0]}">${r[1]}</button>`).join('')}</div>`;
+ if(m&&m.t===t)html+=`<div class="note">Your ${t==='u'?'upvote':'downvote'}: ${rname(t,m.r)}</div><div class="ch"><button type="button" class="rm">Remove my ${t==='u'?'upvote':'downvote'}</button><button type="button" class="cx">Cancel</button></div>`;
+ else html+=`<div class="note">${t==='u'?'Why the upvote?':'Why the downvote?'} Pick a reason${m?` (this replaces your ${m.t==='u'?'👍':'👎'})`:''}:</div><div class="ch">${R.map(r=>`<button type="button" data-r="${r[0]}">${r[1]}</button>`).join('')}<button type="button" class="cx">Cancel</button></div>`;
  return html}
 let RC=ls.get('mm-rc',{}),RF={};
 function rsHtml(id,t){const x=C[id]||{up:0,dn:0,lv:0},total=t==='u'?x.up:x.dn,R=RS[t],vals=RC[id+t];
@@ -466,7 +467,7 @@ const bump=(id,t,d)=>{const x=C[id]||(C[id]={up:0,dn:0,lv:0});if(t==='u'){x.up=M
 cards.forEach(c=>{show(c);const id=c.dataset.hid,p=c.querySelector('.dp');
  const tog=t=>{if(!p.hidden&&p.dataset.t===t){p.hidden=true;return}panel(c,t)};
  c.querySelector('.mmv').onclick=()=>tog('a');c.querySelector('.vt').onclick=()=>tog('u');c.querySelector('.dv').onclick=()=>tog('d');
- p.onclick=async ev=>{const btn=ev.target.closest('button');if(!btn)return;const t=p.dataset.t,prev=mine[id];const isRm=btn.classList.contains('rm'),r=btn.dataset.r;if(!isRm&&!r)return;
+ p.onclick=async ev=>{const btn=ev.target.closest('button');if(!btn)return;if(btn.classList.contains('cx')){p.hidden=true;return}const t=p.dataset.t,prev=mine[id];const isRm=btn.classList.contains('rm'),r=btn.dataset.r;if(!isRm&&!r)return;
   // update the page right away; the counter catches up in the background
   if(prev)bump(id,prev.t,-1);if(isRm){delete mine[id]}else{mine[id]={t,r};bump(id,t,1)}save();show(c);keep(c);
   p.innerHTML=`<div class="note">${isRm?'✓ Your vote was removed':`✓ ${t==='u'?'👍':'👎'} saved: ${rname(t,r)}`}</div>`;setTimeout(()=>{if(p.firstChild&&p.textContent.startsWith('✓'))p.hidden=true},1500);
