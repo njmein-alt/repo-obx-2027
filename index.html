@@ -435,7 +435,7 @@ async function load(id){const [ut,dt,lv]=await Promise.all([net2(id+'-ut',id+'-u
 function show(c){const id=c.dataset.hid,x=C[id]||{up:0,dn:0},m=mine[id],net=x.up-x.dn;c.dataset.mmv=net;c.dataset.mmup=x.up;
  c.querySelector('.mmv').textContent=`M&M votes: ${net}`;
  const b=c.querySelector('.vt'),d=c.querySelector('.dv');b.classList.toggle('mine',!!m&&m.t==='u');d.classList.toggle('mine',!!m&&m.t==='d');
- b.innerHTML='👍'+(x.up>0?`<span class="n">${x.up}</span>`:'');d.innerHTML='👎'+(x.dn>0?`<span class="n">${x.dn}</span>`:'')}
+ b.textContent='👍';d.textContent='👎'}
 function mineHtml(t,id){const m=mine[id],R=RS[t];let html='';
  if(m&&m.t===t)html+=`<div class="note">Your ${t==='u'?'upvote':'downvote'}: ${rname(t,m.r)}</div><div class="ch"><button type="button" class="rm">Remove my ${t==='u'?'upvote':'downvote'}</button></div>`;
  else html+=`<div class="note">${t==='u'?'Why the upvote?':'Why the downvote?'} Pick a reason${m?` (this replaces your ${m.t==='u'?'👍':'👎'})`:''}:</div><div class="ch">${R.map(r=>`<button type="button" data-r="${r[0]}">${r[1]}</button>`).join('')}</div>`;
