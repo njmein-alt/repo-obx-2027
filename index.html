@@ -415,11 +415,11 @@ const Q=[[],[],[]];let running=false,last=0;
 function call(path,isGet,pri){return new Promise((res,rej)=>{Q[pri].push({path,isGet,res,rej,tries:0});pump()})}
 async function pump(){if(running)return;running=true;
  while(true){const job=Q[0].shift()||Q[1].shift()||Q[2].shift();if(!job)break;
-  const gap=last+450-Date.now();if(gap>0)await wait(gap);last=Date.now();
+  const gap=last+1200-Date.now();if(gap>0)await wait(gap);last=Date.now();
   try{const r=await fetch(`${API}/${job.path}`);
    if(job.isGet&&r.status===404){job.res(0);continue}
    if(r.ok){job.res((await r.json()).value||0);continue}
-   if(r.status===429||r.status>=500){if(++job.tries>4){job.rej(0);continue}await wait(r.status===429?10000:1500);Q[0].unshift(job);continue}
+   if(r.status===429||r.status>=500){if(++job.tries>6){job.rej(0);continue}let ms=1500;if(r.status===429){const m=(await r.text()).match(/in ([\d.]+)s/);ms=m?(+m[1]*1000+300):10000}await wait(ms);Q[0].unshift(job);continue}
    job.rej(0)}
   catch(e){if(++job.tries>4){job.rej(0);continue}await wait(1500);Q[0].unshift(job)}}
  running=false}
@@ -430,15 +430,18 @@ function show(c){const id=c.dataset.hid,x=C[id]||{up:0,dn:0},m=mine[id],net=x.up
  c.querySelector('.mmv').textContent=`M&M votes: ${net}`;
  const b=c.querySelector('.vt'),d=c.querySelector('.dv');b.classList.toggle('mine',!!m&&m.t==='u');d.classList.toggle('mine',!!m&&m.t==='d');
  b.innerHTML='👍'+(x.up>0?`<span class="n">${x.up}</span>`:'');d.innerHTML='👎'+(x.dn>0?`<span class="n">${x.dn}</span>`:'')}
+function mineHtml(t,id){const m=mine[id],R=RS[t];let html='';
+ if(m&&m.t===t)html+=`<div class="note">Your ${t==='u'?'upvote':'downvote'}: ${rname(t,m.r)}</div><div class="ch"><button type="button" class="rm">Remove my ${t==='u'?'upvote':'downvote'}</button></div>`;
+ else html+=`<div class="note">${t==='u'?'Why the upvote?':'Why the downvote?'} Pick a reason${m?` (this replaces your ${m.t==='u'?'👍':'👎'})`:''}:</div><div class="ch">${R.map(r=>`<button type="button" data-r="${r[0]}">${r[1]}</button>`).join('')}</div>`;
+ return html}
 async function panel(c,t){const id=c.dataset.hid,p=c.querySelector('.dp'),R=RS[t],m=mine[id],x=C[id]||{up:0,dn:0};p.className='dp '+t;p.dataset.t=t;
  let html='';const total=t==='u'?x.up:x.dn;
- if(total>0){p.innerHTML='<div class="note">Loading reasons…</div>';PRI=1;
+ if(total>0){p.innerHTML='<div class="note">Loading reasons…</div>'+mineHtml(t,id);p.className='dp '+t;p.hidden=false;PRI=1;
   try{const vals=[];for(const r of R)vals.push(await net2(`${id}-${t}r-${r[0]}`,`${id}-${t}ru-${r[0]}`));
    const legacy=t==='u'?await net2(id+'-v',id+'-u'):0;
    PRI=2;html=`<div class="rs"><b>${t==='u'?'👍 Why people like it':'👎 Why people don’t'}</b>`+R.map((r,i)=>vals[i]>0?`<div>${r[1]} ×${vals[i]}</div>`:'').join('')+(legacy>0?`<div>No reason given ×${legacy}</div>`:'')+'</div>'}
   catch(e){PRI=2;html='<div class="note">Couldn’t load reasons.</div>'}}
- if(m&&m.t===t)html+=`<div class="note">Your ${t==='u'?'upvote':'downvote'}: ${rname(t,m.r)}</div><div class="ch"><button type="button" class="rm">Remove my ${t==='u'?'upvote':'downvote'}</button></div>`;
- else html+=`<div class="note">${t==='u'?'Why the upvote?':'Why the downvote?'} Pick a reason${m?` (this replaces your ${m.t==='u'?'👍':'👎'})`:''}:</div><div class="ch">${R.map(r=>`<button type="button" data-r="${r[0]}">${r[1]}</button>`).join('')}</div>`;
+ html+=mineHtml(t,id);
  p.innerHTML=html;p.hidden=false}
 async function removeMine(id){const m=mine[id];if(!m)return;if(m.r==='legacy')await hit(id+'-u');else{await hit(`${id}-${m.t}ru-${m.r}`);await hit(`${id}-${m.t}tu`)}delete mine[id];save()}
 cards.forEach(c=>{show(c);const id=c.dataset.hid,p=c.querySelector('.dp');
