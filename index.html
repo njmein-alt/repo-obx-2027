@@ -425,7 +425,7 @@ async function pump(){if(running)return;running=true;
  running=false}
 let PRI=2;const get=key=>call(`get/${NS}/${key}`,true,PRI),hit=key=>call(`hit/${NS}/${key}`,false,0);
 const net2=async(a,b)=>{const x=await get(a);return x>0?Math.max(0,x-(await get(b))):0};
-async function load(id){const [ut,dt,lv]=await Promise.all([net2(id+'-ut',id+'-utu'),net2(id+'-dt',id+'-dtu'),net2(id+'-v',id+'-u')]);C[id]={up:lv+ut,dn:dt,lv}}
+async function load(id){const [ut,dt,lv]=await Promise.all([net2(id+'-ut',id+'-utu'),net2(id+'-dt',id+'-dtu'),net2(id+'-v',id+'-u')]);if(!pend[id])C[id]={up:lv+ut,dn:dt,lv}}
 function show(c){const id=c.dataset.hid,x=C[id]||{up:0,dn:0},m=mine[id],net=x.up-x.dn;c.dataset.mmv=net;c.dataset.mmup=x.up;
  c.querySelector('.mmv').textContent=`M&M votes: ${net}`;
  const b=c.querySelector('.vt'),d=c.querySelector('.dv');b.classList.toggle('mine',!!m&&m.t==='u');d.classList.toggle('mine',!!m&&m.t==='d');
@@ -443,16 +443,19 @@ async function panel(c,t){const id=c.dataset.hid,p=c.querySelector('.dp'),R=RS[t
   catch(e){PRI=2;html='<div class="note">Couldn’t load reasons.</div>'}}
  html+=mineHtml(t,id);
  p.innerHTML=html;p.hidden=false}
-async function removeMine(id){const m=mine[id];if(!m)return;if(m.r==='legacy')await hit(id+'-u');else{await hit(`${id}-${m.t}ru-${m.r}`);await hit(`${id}-${m.t}tu`)}delete mine[id];save()}
+const pend={};
+async function undo(id,m){if(!m)return;if(m.r==='legacy')await hit(id+'-u');else{await hit(`${id}-${m.t}ru-${m.r}`);await hit(`${id}-${m.t}tu`)}}
+const bump=(id,t,d)=>{const x=C[id]||(C[id]={up:0,dn:0,lv:0});if(t==='u'){x.up=Math.max(0,x.up+d);if(d<0&&x.lv>0)x.lv--}else x.dn=Math.max(0,x.dn+d)};
 cards.forEach(c=>{show(c);const id=c.dataset.hid,p=c.querySelector('.dp');
  const tog=t=>{if(!p.hidden&&p.dataset.t===t){p.hidden=true;return}panel(c,t)};
  c.querySelector('.vt').onclick=()=>tog('u');c.querySelector('.dv').onclick=()=>tog('d');
- p.onclick=async ev=>{const btn=ev.target.closest('button');if(!btn||p.dataset.busy)return;const t=p.dataset.t;p.dataset.busy=1;p.querySelectorAll('button').forEach(x=>x.disabled=true);
-  try{if(btn.classList.contains('rm'))await removeMine(id);
-   else if(btn.dataset.r){await removeMine(id);await hit(`${id}-${t}r-${btn.dataset.r}`);await hit(`${id}-${t}t`);mine[id]={t,r:btn.dataset.r};save()}
-   PRI=0;try{await load(id)}finally{PRI=2}save();show(c);await panel(c,t);keep(c)}
-  catch(e){p.querySelectorAll('button').forEach(x=>x.disabled=false);p.insertAdjacentHTML('beforeend','<div class="note">Couldn’t save, try again.</div>')}
-  delete p.dataset.busy}});
+ p.onclick=async ev=>{const btn=ev.target.closest('button');if(!btn)return;const t=p.dataset.t,prev=mine[id];const isRm=btn.classList.contains('rm'),r=btn.dataset.r;if(!isRm&&!r)return;
+  // update the page right away; the counter catches up in the background
+  if(prev)bump(id,prev.t,-1);if(isRm){delete mine[id]}else{mine[id]={t,r};bump(id,t,1)}save();show(c);keep(c);
+  p.innerHTML=`<div class="note">${isRm?'✓ Your vote was removed':`✓ ${t==='u'?'👍':'👎'} saved: ${rname(t,r)}`}</div>`;setTimeout(()=>{if(p.firstChild&&p.textContent.startsWith('✓'))p.hidden=true},1500);
+  pend[id]=(pend[id]||0)+1;try{await undo(id,prev);if(!isRm){await hit(`${id}-${t}r-${r}`);await hit(`${id}-${t}t`)}}
+  catch(e){if(isRm){mine[id]=prev}else{bump(id,t,-1);if(prev)mine[id]=prev;else delete mine[id]}if(prev)bump(id,prev.t,1);save();show(c);p.hidden=false;p.innerHTML='<div class="note">⚠️ Couldn’t save your vote — the vote counter is busy. Please try again in a few seconds.</div>'}
+  finally{pend[id]--}}});
 (async()=>{const order=[...document.querySelectorAll('.card[data-hid]')].sort((a,b)=>(a.style.display==='none')-(b.style.display==='none'));for(const c of order){try{await load(c.dataset.hid);show(c);save()}catch(e){}}keep(null)})()
 })()</script>
 </body></html>
